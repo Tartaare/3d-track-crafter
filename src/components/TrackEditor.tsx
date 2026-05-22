@@ -641,6 +641,7 @@ export default function TrackEditor() {
             </label>
           </div>
           <GeneratorPanel
+            trackWidth={width}
             onGenerate={(pts) => apiRef.current?.setPoints(pts)}
           />
           <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
