@@ -666,7 +666,7 @@ export default function TrackEditor() {
   );
 }
 
-function GeneratorPanel({ onGenerate }: { onGenerate: (pts: { x: number; z: number }[]) => void }) {
+function GeneratorPanel({ onGenerate, trackWidth }: { onGenerate: (pts: { x: number; z: number }[]) => void; trackWidth: number }) {
   const [n, setN] = useState(18);
   const [length, setLength] = useState(220);
   const [repulsion, setRepulsion] = useState(1.2);
