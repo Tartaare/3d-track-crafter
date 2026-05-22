@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import RAPIER from "@dimforge/rapier3d-compat";
+import { runGeneration } from "@/lib/trackGenerator";
+
 
 type Mode = "edit" | "drive";
 
