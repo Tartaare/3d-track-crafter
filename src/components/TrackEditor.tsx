@@ -491,6 +491,12 @@ async function createScene(container: HTMLDivElement): Promise<SceneAPI> {
         }
       } catch {}
     },
+    setPoints(pts) {
+      if (!Array.isArray(pts) || pts.length < 3) return;
+      points = pts.map((p) => ({ x: p.x, y: 0, z: p.z }));
+      rebuildTrack();
+      spawnCar();
+    },
     dispose() {
       cancelAnimationFrame(raf);
       ro.disconnect();
