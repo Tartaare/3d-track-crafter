@@ -606,11 +606,15 @@ export default function TrackEditor() {
               />
             </label>
           </div>
+          <GeneratorPanel
+            onGenerate={(pts) => apiRef.current?.setPoints(pts)}
+          />
           <p className="pt-2 text-[11px] leading-relaxed text-muted-foreground">
             Drag the blue dots to shape the track. Drag empty space to orbit, scroll to zoom.
           </p>
         </div>
       )}
+
 
       {mode === "drive" && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-2xl border border-border bg-card/80 px-5 py-2 text-xs text-muted-foreground shadow-sm backdrop-blur">
