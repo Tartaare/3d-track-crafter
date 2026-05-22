@@ -686,7 +686,9 @@ function GeneratorPanel({ onGenerate, trackWidth }: { onGenerate: (pts: { x: num
         iterations: 120,
         lengthTarget: length,
         repulsion,
-        minDist: Math.max(6, length / n * 0.8),
+        // Non-adjacent control points must stay further apart than the
+        // ribbon width, otherwise distant portions of the loop would overlap.
+        minDist: Math.max(trackWidth * 1.8, length / n * 0.9),
         bbox: 70,
       },
       {
