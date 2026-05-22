@@ -116,19 +116,55 @@ async function createScene(container: HTMLDivElement): Promise<SceneAPI> {
     const divisions = Math.max(60, points.length * 20);
     const spaced = curve.getSpacedPoints(divisions);
 
+    // Precompute per-sample frame (tangent, side) and a curvature-aware
+    // half-width. The inner edge of a ribbon folds onto itself whenever the
+    // local radius of curvature R is smaller than width/2. We clamp the
+    // half-width by R - margin so the ribbon never crosses its own centerline.
+    const up = new THREE.Vector3(0, 1, 0);
+    const N = divisions + 1;
+    const sides: THREE.Vector3[] = new Array(N);
+    const halfRaw = trackWidth / 2;
+    const halfLocal: number[] = new Array(N);
+    const margin = 0.15;
+
+    for (let i = 0; i < N; i++) {
+      const t = i / divisions;
+      const tan = curve.getTangent(t).normalize();
+      sides[i] = new THREE.Vector3().crossVectors(tan, up).normalize();
+    }
+    // Local radius via discrete curvature on three consecutive samples.
+    for (let i = 0; i < N; i++) {
+      const ip = (i - 1 + N) % N;
+      const inx = (i + 1) % N;
+      const v1 = new THREE.Vector3().subVectors(spaced[i], spaced[ip]);
+      const v2 = new THREE.Vector3().subVectors(spaced[inx], spaced[i]);
+      const l1 = v1.length(), l2 = v2.length();
+      const ang = l1 > 1e-5 && l2 > 1e-5 ? v1.angleTo(v2) : 0;
+      const seg = (l1 + l2) * 0.5;
+      const radius = ang > 1e-4 ? seg / ang : Infinity;
+      halfLocal[i] = Math.max(0.4, Math.min(halfRaw, radius - margin));
+    }
+    // Smooth the half-width to avoid abrupt pinches.
+    const halfSmooth: number[] = new Array(N);
+    for (let i = 0; i < N; i++) {
+      const a = halfLocal[(i - 1 + N) % N];
+      const b = halfLocal[i];
+      const c = halfLocal[(i + 1) % N];
+      halfSmooth[i] = (a + 2 * b + c) * 0.25;
+    }
+
     // Build ribbon geometry
     const positions: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
-    const up = new THREE.Vector3(0, 1, 0);
 
-    for (let i = 0; i <= divisions; i++) {
+    for (let i = 0; i < N; i++) {
       const t = i / divisions;
       const p = spaced[i];
-      const tan = curve.getTangent(t).normalize();
-      const side = new THREE.Vector3().crossVectors(tan, up).normalize();
-      const left = p.clone().addScaledVector(side, -trackWidth / 2);
-      const right = p.clone().addScaledVector(side, trackWidth / 2);
+      const side = sides[i];
+      const hw = halfSmooth[i];
+      const left = p.clone().addScaledVector(side, -hw);
+      const right = p.clone().addScaledVector(side, hw);
       positions.push(left.x, left.y, left.z, right.x, right.y, right.z);
       uvs.push(0, t * divisions * 0.2, 1, t * divisions * 0.2);
     }
@@ -152,16 +188,14 @@ async function createScene(container: HTMLDivElement): Promise<SceneAPI> {
     centerLine.position.y = 0.06;
     trackGroup.add(centerLine);
 
-    // Curbs (left/right strips)
+    // Curbs (left/right strips) — use the same clamped half-width.
     const curbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.7 });
     const curbInside: number[] = [];
     const curbOutside: number[] = [];
-    for (let i = 0; i <= divisions; i++) {
-      const t = i / divisions;
+    for (let i = 0; i < N; i++) {
       const p = spaced[i];
-      const tan = curve.getTangent(t).normalize();
-      const side = new THREE.Vector3().crossVectors(tan, up).normalize();
-      const w = trackWidth / 2;
+      const side = sides[i];
+      const w = halfSmooth[i];
       const lOut = p.clone().addScaledVector(side, -(w + 0.3));
       const lIn = p.clone().addScaledVector(side, -w);
       const rIn = p.clone().addScaledVector(side, w);
