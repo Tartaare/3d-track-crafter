@@ -630,3 +630,82 @@ export default function TrackEditor() {
     </div>
   );
 }
+
+function GeneratorPanel({ onGenerate }: { onGenerate: (pts: { x: number; z: number }[]) => void }) {
+  const [n, setN] = useState(18);
+  const [length, setLength] = useState(220);
+  const [repulsion, setRepulsion] = useState(1.2);
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 10000));
+  const [progress, setProgress] = useState<number | null>(null);
+  const cancelRef = useRef<(() => void) | null>(null);
+
+  function generate(newSeed?: number) {
+    cancelRef.current?.();
+    const s = newSeed ?? seed;
+    setSeed(s);
+    setProgress(0);
+    cancelRef.current = runGeneration(
+      {
+        n,
+        seed: s,
+        iterations: 120,
+        lengthTarget: length,
+        repulsion,
+        minDist: Math.max(6, length / n * 0.8),
+        bbox: 70,
+      },
+      {
+        onStep: (i, total, pts) => {
+          setProgress(i / total);
+          if (i % 20 === 0) onGenerate(pts);
+        },
+        onDone: (pts) => {
+          setProgress(null);
+          onGenerate(pts);
+        },
+      }
+    );
+  }
+
+  useEffect(() => () => cancelRef.current?.(), []);
+
+  return (
+    <div className="space-y-2 border-t border-border pt-3">
+      <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        Procedural generator
+      </div>
+      <label className="flex items-center justify-between text-xs text-muted-foreground">
+        Points <span className="text-foreground">{n}</span>
+      </label>
+      <input type="range" min={8} max={32} step={1} value={n}
+        onChange={(e) => setN(parseInt(e.target.value))} className="w-full accent-foreground" />
+      <label className="flex items-center justify-between text-xs text-muted-foreground">
+        Length <span className="text-foreground">{length}m</span>
+      </label>
+      <input type="range" min={120} max={360} step={10} value={length}
+        onChange={(e) => setLength(parseInt(e.target.value))} className="w-full accent-foreground" />
+      <label className="flex items-center justify-between text-xs text-muted-foreground">
+        Repulsion <span className="text-foreground">{repulsion.toFixed(1)}</span>
+      </label>
+      <input type="range" min={0.4} max={2.5} step={0.1} value={repulsion}
+        onChange={(e) => setRepulsion(parseFloat(e.target.value))} className="w-full accent-foreground" />
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <button
+          onClick={() => generate(seed)}
+          className="rounded-lg bg-foreground px-3 py-1.5 text-xs font-medium text-background hover:opacity-90"
+        >Generate</button>
+        <button
+          onClick={() => generate(Math.floor(Math.random() * 10000))}
+          className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium hover:bg-accent"
+        >New seed</button>
+      </div>
+      {progress !== null && (
+        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full bg-foreground transition-all" style={{ width: `${Math.round(progress * 100)}%` }} />
+        </div>
+      )}
+      <div className="text-[10px] text-muted-foreground">Seed {seed} · repulsive-curve evolution</div>
+    </div>
+  );
+}
+
