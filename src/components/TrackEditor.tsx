@@ -24,8 +24,10 @@ interface SceneAPI {
   reset: () => void;
   exportJSON: () => string;
   importJSON: (json: string) => void;
+  setPoints: (pts: { x: number; z: number }[]) => void;
   dispose: () => void;
 }
+
 
 async function createScene(container: HTMLDivElement): Promise<SceneAPI> {
   await RAPIER.init();
